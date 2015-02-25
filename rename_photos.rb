@@ -21,7 +21,7 @@ def creation_time(file)
 end
 
 def read_photos(dir)
-  files = Dir.glob(File.join(dir, "*.{jpg,JPG,mts,MTS,mp4,MP4}"))
+  files = Dir.glob(File.join(dir, "*.{jpg,mts,mp4}"), File::FNM_CASEFOLD)
 
   photos = files.map do |file|
     params = {
@@ -73,4 +73,4 @@ end
 
 # run ruby script in current folder
 current_dir = Dir.pwd
-rename_photos({ :dir => current_dir, :test => ARGV[0] == "-test" })
+rename_photos(:dir => current_dir, :test => ARGV[0] == "-test")
