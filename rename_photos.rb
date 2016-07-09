@@ -21,7 +21,7 @@ def creation_time(file)
 end
 
 def read_photos(dir)
-  files = Dir.glob(File.join(dir, "*.{jpg,mts,mp4}"), File::FNM_CASEFOLD)
+  files = Dir.glob(File.join(dir, "*.{jpg,mts,mp4,mpg}"), File::FNM_CASEFOLD)
 
   photos = files.map do |file|
     params = {
