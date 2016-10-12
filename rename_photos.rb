@@ -4,73 +4,124 @@ require "open3"
 require "time"
 
 class Photo
-  attr_accessor :file
-  attr_accessor :extension
+  attr_accessor :path
   attr_accessor :created_at
 
-  def initialize(params)
-    self.file = params[:file]
-    self.extension = params[:extension]
-    self.created_at = params[:created_at]
+  def initialize(path:, created_at:)
+    self.path = path
+    self.created_at = created_at
+  end
+
+  def extension
+    File.extname(path).downcase
   end
 end
 
-def creation_time(file)
-  # mdls is Mac OS specific
-  Time.parse(Open3.popen2("mdls", "-name", "kMDItemContentCreationDate", "-raw", file)[1].read)
-end
+class FileRename
+  attr_accessor :old_path
+  attr_accessor :new_dir
+  attr_accessor :new_file_name
 
-def read_photos(dir)
-  files = Dir.glob(File.join(dir, "*.{jpg,mts,mp4,mpg}"), File::FNM_CASEFOLD)
-
-  photos = files.map do |file|
-    params = {
-      :file => file,
-      :extension => File.extname(file).downcase,
-      :created_at => creation_time(file)
-    }
-    Photo.new(params)
+  def initialize(old_path:, new_dir:, new_file_name:)
+    self.old_path = old_path
+    self.new_dir = new_dir
+    self.new_file_name = new_file_name
   end
 
-  photos.sort_by! { |photo| photo.created_at }
-end
-
-
-def rename_photos(options)
-  puts options[:test] ? "Running in test mode" : "Renaming files..."
-
-  photos = read_photos(options[:dir])
-
-  if options[:after]
-    after_date = Date.parse(options[:after])
-    photos = photos.reject { |photo| photo.created_at.to_date <= after_date }
+  def new_path
+    File.join(new_dir, new_file_name)
   end
 
-  index = 0
-  previous_date = nil
-  photos.each do |photo|
-    current_date = photo.created_at.to_date
-    if current_date != previous_date
-      index = 0
-      previous_date = current_date
+  def puts_rename(include_new_dir: true)
+    if include_new_dir
+      puts "#{old_path} -> #{new_path}"
     else
-      index += 1
-    end
-
-    new_name = "#{current_date.to_s}-#{"%03d" % (index + 1)}#{photo.extension}"
-
-    # puts "#{photo.file} -> #{File.join(options[:dir], new_name)}"
-    puts "#{photo.file} -> #{new_name}"
-
-    unless options[:test]
-      File.rename(photo.file, File.join(options[:dir], new_name))
+      puts "#{old_path} -> #{new_file_name}"
     end
   end
 
-  nil
+  def process
+    File.rename(old_path, new_path)
+  end
 end
 
+class RenamePhotos
+  attr_accessor :dir, :after_date
 
-# run ruby script in current folder
-current_dir = Dir.pwd
-rename_photos(:dir => current_dir, :test => ARGV[0] == "-test")
+  def initialize(dir:, after_date: nil)
+    self.dir = dir
+    self.after_date = after_date
+  end
+
+  def process
+    puts_file_renames
+
+    if file_renames.any? && apply_renames?
+      file_renames.each(&:process)
+      puts "Done"
+      true
+    else
+      false
+    end
+  end
+
+  private
+
+  def creation_time(file)
+    # mdls is Mac OS specific
+    Time.parse(Open3.popen2("mdls", "-name", "kMDItemContentCreationDate", "-raw", file)[1].read)
+  end
+
+  def files
+    @files ||= Dir.glob(File.join(dir, "*.{jpg,mts,mp4,mpg}"), File::FNM_CASEFOLD)
+  end
+
+  def photos
+    @photos ||= begin
+      photos_list = files.map do |file|
+        created_at = creation_time(file)
+        if after_date.nil? || created_at.to_date > after_date
+          Photo.new(path: file, created_at: created_at)
+        end
+      end
+
+      photos_list.compact.sort_by { |photo| photo.created_at }
+    end
+  end
+
+  def file_renames
+    @file_renames ||= begin
+      index = 1
+      previous_date = nil
+      photos.map do |photo|
+        current_date = photo.created_at.to_date
+        if current_date != previous_date
+          index = 1
+          previous_date = current_date
+        else
+          index += 1
+        end
+
+        new_name = "#{current_date.to_s}-#{"%03d" % index}#{photo.extension}"
+        FileRename.new(old_path: photo.path, new_dir: dir, new_file_name: new_name)
+      end
+    end
+  end
+
+  def puts_file_renames
+    if file_renames.any?
+      puts "File renames:"
+      file_renames.each { |file_rename| file_rename.puts_rename(include_new_dir: false) }
+    else
+      puts "No files to rename."
+    end
+  end
+
+  def apply_renames?
+    printf "\nRename? (press 'y' to continue) "
+    STDIN.gets.chomp.downcase == 'y'
+  end
+end
+
+# run rename in current folder
+RenamePhotos.new(dir: Dir.pwd).process
