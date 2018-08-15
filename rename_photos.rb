@@ -85,7 +85,7 @@ class RenamePhotos
         end
       end
 
-      photos_list.compact.sort_by { |photo| photo.created_at }
+      photos_list.compact.sort_by { |photo| [photo.created_at, photo.path] }
     end
   end
 
