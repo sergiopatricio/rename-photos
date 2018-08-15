@@ -73,7 +73,7 @@ class RenamePhotos
   end
 
   def files
-    @files ||= Dir.glob(File.join(dir, "*.{jpg,mts,mp4,mpg}"), File::FNM_CASEFOLD)
+    @files ||= Dir.glob(File.join(dir, "*.{jpg,jpeg,png,mts,mp4,mpg,avi}"), File::FNM_CASEFOLD)
   end
 
   def photos
