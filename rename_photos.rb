@@ -121,7 +121,7 @@ class RenamePhotos
           index += 1
         end
 
-        new_name = "#{current_date.to_s}-#{"%03d" % index}#{photo.extension}"
+        new_name = "#{current_date}-#{format("%03d", index)}#{photo.extension}"
         FileRename.new(old_path: photo.path, new_dir: dir, new_file_name: new_name)
       end
     end
@@ -139,7 +139,7 @@ class RenamePhotos
 
   def apply_renames?
     printf "\nRename? (press 'y' to continue) "
-    STDIN.gets.chomp.downcase == 'y'
+    STDIN.gets.chomp.casecmp('y').zero?
   end
 
   def collisions?
