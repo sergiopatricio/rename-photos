@@ -32,6 +32,10 @@ class FileRename
     File.join(new_dir, new_file_name)
   end
 
+  def new_temporary_path
+    File.join(new_dir, "temp_#{new_file_name}")
+  end
+
   def puts_rename(include_new_dir: true)
     if include_new_dir
       puts "#{old_path} -> #{new_path}"
@@ -40,8 +44,16 @@ class FileRename
     end
   end
 
-  def process
-    File.rename(old_path, new_path)
+  def process(to_temporary: false, from_temporary: false)
+    raise "use only one flag" if to_temporary && from_temporary
+
+    if to_temporary
+      File.rename(old_path, new_temporary_path)
+    elsif from_temporary
+      File.rename(new_temporary_path, new_path)
+    else
+      File.rename(old_path, new_path)
+    end
   end
 end
 
@@ -57,7 +69,14 @@ class RenamePhotos
     puts_file_renames
 
     if file_renames.any? && apply_renames?
-      file_renames.each(&:process)
+      if collisions?
+        puts "Renaming with temporary files"
+        file_renames.each{ |file_rename| file_rename.process(to_temporary: true) }
+        file_renames.each{ |file_rename| file_rename.process(from_temporary: true) }
+      else
+        file_renames.each(&:process)
+      end
+
       puts "Done"
       true
     else
@@ -112,6 +131,7 @@ class RenamePhotos
     if file_renames.any?
       puts "File renames:"
       file_renames.each { |file_rename| file_rename.puts_rename(include_new_dir: false) }
+      puts "Collisions detected, will rename with temporary files" if collisions?
     else
       puts "No files to rename."
     end
@@ -120,6 +140,10 @@ class RenamePhotos
   def apply_renames?
     printf "\nRename? (press 'y' to continue) "
     STDIN.gets.chomp.downcase == 'y'
+  end
+
+  def collisions?
+    (file_renames.map(&:old_path) & file_renames.map(&:new_path)).any?
   end
 end
 
