@@ -3,12 +3,12 @@
 require 'open3'
 require 'time'
 
-class Photo
-  attr_accessor :path, :created_at
+class FileInfo
+  attr_reader :path, :created_at
 
   def initialize(path:, created_at:)
-    self.path = path
-    self.created_at = created_at
+    @path = path
+    @created_at = created_at
   end
 
   def extension
@@ -17,12 +17,12 @@ class Photo
 end
 
 class FileRename
-  attr_accessor :old_path, :new_dir, :new_file_name
+  attr_reader :old_path, :new_dir, :new_file_name
 
   def initialize(old_path:, new_dir:, new_file_name:)
-    self.old_path = old_path
-    self.new_dir = new_dir
-    self.new_file_name = new_file_name
+    @old_path = old_path
+    @new_dir = new_dir
+    @new_file_name = new_file_name
   end
 
   def new_path
@@ -35,9 +35,9 @@ class FileRename
 
   def puts_rename(include_new_dir: true)
     if include_new_dir
-      puts "#{old_path} -> #{new_path}"
+      puts "  #{old_path} -> #{new_path}"
     else
-      puts "#{old_path} -> #{new_file_name}"
+      puts "  #{old_path} -> #{new_file_name}"
     end
   end
 
@@ -55,11 +55,11 @@ class FileRename
 end
 
 class RenamePhotos
-  attr_accessor :dir, :after_date
+  attr_reader :dir, :after_date
 
   def initialize(dir:, after_date: nil)
-    self.dir = dir
-    self.after_date = after_date
+    @dir = dir
+    @after_date = after_date
   end
 
   def process
@@ -96,7 +96,7 @@ class RenamePhotos
     @photos ||= begin
       photos_list = files.map do |file|
         created_at = creation_time(file)
-        Photo.new(path: file, created_at: created_at) if after_date.nil? || created_at.to_date > after_date
+        FileInfo.new(path: file, created_at: created_at) if after_date.nil? || created_at.to_date > after_date
       end
 
       photos_list.compact.sort_by { |photo| [photo.created_at, photo.path] }
