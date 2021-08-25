@@ -1,11 +1,10 @@
 #!/usr/bin/env ruby
 
-require "open3"
-require "time"
+require 'open3'
+require 'time'
 
 class Photo
-  attr_accessor :path
-  attr_accessor :created_at
+  attr_accessor :path, :created_at
 
   def initialize(path:, created_at:)
     self.path = path
@@ -18,9 +17,7 @@ class Photo
 end
 
 class FileRename
-  attr_accessor :old_path
-  attr_accessor :new_dir
-  attr_accessor :new_file_name
+  attr_accessor :old_path, :new_dir, :new_file_name
 
   def initialize(old_path:, new_dir:, new_file_name:)
     self.old_path = old_path
@@ -45,7 +42,7 @@ class FileRename
   end
 
   def process(to_temporary: false, from_temporary: false)
-    raise "use only one flag" if to_temporary && from_temporary
+    raise 'use only one flag' if to_temporary && from_temporary
 
     if to_temporary
       File.rename(old_path, new_temporary_path)
@@ -70,14 +67,14 @@ class RenamePhotos
 
     if file_renames.any? && apply_renames?
       if collisions?
-        puts "Renaming with temporary files"
-        file_renames.each{ |file_rename| file_rename.process(to_temporary: true) }
-        file_renames.each{ |file_rename| file_rename.process(from_temporary: true) }
+        puts 'Renaming with temporary files'
+        file_renames.each { |file_rename| file_rename.process(to_temporary: true) }
+        file_renames.each { |file_rename| file_rename.process(from_temporary: true) }
       else
         file_renames.each(&:process)
       end
 
-      puts "Done"
+      puts 'Done'
       true
     else
       false
@@ -88,20 +85,18 @@ class RenamePhotos
 
   def creation_time(file)
     # mdls is Mac OS specific
-    Time.parse(Open3.popen2("mdls", "-name", "kMDItemContentCreationDate", "-raw", file)[1].read)
+    Time.parse(Open3.popen2('mdls', '-name', 'kMDItemContentCreationDate', '-raw', file)[1].read)
   end
 
   def files
-    @files ||= Dir.glob(File.join(dir, "*.{jpg,jpeg,png,heic,mts,mp4,mpg,avi,mov}"), File::FNM_CASEFOLD)
+    @files ||= Dir.glob(File.join(dir, '*.{jpg,jpeg,png,heic,mts,mp4,mpg,avi,mov}'), File::FNM_CASEFOLD)
   end
 
   def photos
     @photos ||= begin
       photos_list = files.map do |file|
         created_at = creation_time(file)
-        if after_date.nil? || created_at.to_date > after_date
-          Photo.new(path: file, created_at: created_at)
-        end
+        Photo.new(path: file, created_at: created_at) if after_date.nil? || created_at.to_date > after_date
       end
 
       photos_list.compact.sort_by { |photo| [photo.created_at, photo.path] }
@@ -121,7 +116,7 @@ class RenamePhotos
           index += 1
         end
 
-        new_name = "#{current_date}-#{format("%03d", index)}#{photo.extension}"
+        new_name = "#{current_date}-#{format('%03d', index)}#{photo.extension}"
         FileRename.new(old_path: photo.path, new_dir: dir, new_file_name: new_name)
       end
     end
@@ -129,17 +124,17 @@ class RenamePhotos
 
   def puts_file_renames
     if file_renames.any?
-      puts "File renames:"
+      puts 'File renames:'
       file_renames.each { |file_rename| file_rename.puts_rename(include_new_dir: false) }
-      puts "Collisions detected, will rename with temporary files" if collisions?
+      puts 'Collisions detected, will rename with temporary files' if collisions?
     else
-      puts "No files to rename."
+      puts 'No files to rename.'
     end
   end
 
   def apply_renames?
     printf "\nRename? (press 'y' to continue) "
-    STDIN.gets.chomp.casecmp('y').zero?
+    $stdin.gets.chomp.casecmp('y').zero?
   end
 
   def collisions?
