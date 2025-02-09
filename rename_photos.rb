@@ -84,8 +84,12 @@ class RenamePhotos
   private
 
   def creation_time(file)
-    # mdls is Mac OS specific
-    Time.parse(Open3.popen2('mdls', '-name', 'kMDItemContentCreationDate', '-raw', file)[1].read)
+    # Using exiftool to extract time information
+    # This may fail with a lot of files open (more than 256)
+    #   In the terminal, set "ulimit -n 1000" top allow opening more files
+    extracted_info = Open3.popen2('exiftool', '-s3', '-DateTimeOriginal', '-OffsetTimeOriginal', '-MDItemContentModificationDate', '-d', '%Y-%m-%d %H:%M:%S', file)[1].read
+    Time.parse(extracted_info).localtime('-01:00')
+    # TODO: when info is not present
   end
 
   def files
