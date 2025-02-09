@@ -3,14 +3,7 @@
 require 'open3'
 require 'time'
 
-class FileInfo
-  attr_reader :path, :created_at
-
-  def initialize(path:, created_at:)
-    @path = path
-    @created_at = created_at
-  end
-
+FileInfo = Data.define(:path, :created_at) do
   def extension
     File.extname(path).downcase
   end
@@ -55,6 +48,8 @@ class FileRename
 end
 
 class RenamePhotos
+  EXTENSIONS = %w[avi heic jpeg jpg mov mp4 mpg mts png]
+
   attr_reader :dir, :after_date
 
   def initialize(dir:, after_date: nil)
@@ -93,7 +88,7 @@ class RenamePhotos
   end
 
   def files
-    @files ||= Dir.glob(File.join(dir, '*.{jpg,jpeg,png,heic,mts,mp4,mpg,avi,mov}'), File::FNM_CASEFOLD)
+    @files ||= Dir.glob(File.join(dir, "*.{#{(EXTENSIONS + EXTENSIONS.map(&:upcase)).join(',')}}"))
   end
 
   def photos
